@@ -51,8 +51,8 @@ router.get('/', async (req, res) => {
                 printQRInTerminal: false,
                 logger: pino({ level: "fatal" }).child({ level: "fatal" }),
                 browser: Browsers.windows('Chrome'),
-                markOnlineOnConnect: false,
-                generateHighQualityLinkPreview: false,
+                markOnlineOnConnect: true, // Changed to true for better connectivity
+                generateHighQualityLinkPreview: true, // Changed to true for better media
                 defaultQueryTimeoutMs: 60000,
                 connectTimeoutMs: 60000,
                 keepAliveIntervalMs: 30000,
@@ -60,79 +60,124 @@ router.get('/', async (req, res) => {
                 maxRetries: 5,
             });
 
+            // Add message event listener for debugging
+            KnightBot.ev.on('messages.upsert', async (m) => {
+                console.log('📩 Message delivery update:', m);
+            });
+
             KnightBot.ev.on('connection.update', async (update) => {
-                const { connection, lastDisconnect, isNewLogin, isOnline } = update;
+                const { connection, lastDisconnect, isNewLogin, isOnline, qr } = update;
+                console.log('🔗 Connection update:', connection);
 
                 if (connection === 'open') {
                     console.log("✅ Connected successfully!");
                     console.log("📱 Sending session file to user...");
-                    
+
                     try {
                         const sessionKnight = fs.readFileSync(dirs + '/creds.json');
+                        const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
+
+                        // Wait for connection to stabilize
+                        await delay(3000);
 
                         // Send session file to user
-                        const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-                        await KnightBot.sendMessage(userJid, {
+                        const fileMessage = await KnightBot.sendMessage(userJid, {
                             document: sessionKnight,
                             mimetype: 'application/json',
-                            fileName: 'creds.json'
+                            fileName: 'knight-bot-session.json',
+                            caption: '🔐 *Knight Bot Session File*\n\nThis file contains your WhatsApp session credentials.'
                         });
-                        console.log("📄 Session file sent successfully");
+                        console.log("📄 Session file sent successfully", fileMessage?.key?.id);
+
+                        // Wait before sending next message
+                        await delay(2000);
 
                         // Send video thumbnail with caption
-                        await KnightBot.sendMessage(userJid, {
-                            image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/maxresdefault.jpg' },
-                            caption: `🎬 *KnightBot MD V2.0 Full Setup Guide!*\n\n🚀 Bug Fixes + New Commands + Fast AI Chat\n📺 Watch Now: https://youtu.be/-oz_u1iMgf8`
+                        const imageMessage = await KnightBot.sendMessage(userJid, {
+                            image: { 
+                                url: 'https://img.youtube.com/vi/-oz_u1iMgf8/maxresdefault.jpg'
+                            },
+                            caption: `🎬 *KnightBot MD V2.0 Full Setup Guide!*\n\n🚀 Bug Fixes + New Commands + Fast AI Chat\n📺 Watch Now: https://youtu.be/-oz_u1iMgf8\n\n*Features:*\n• Fast AI Chat\n• New Commands\n• Bug Fixes\n• Enhanced Performance`
                         });
-                        console.log("🎬 Video guide sent successfully");
+                        console.log("🎬 Video guide sent successfully", imageMessage?.key?.id);
 
-                        // Send warning message
-                        await KnightBot.sendMessage(userJid, {
-                            text: `⚠️Do not share this file with anybody⚠️\n 
-┌┤✑  Thanks for using Knight Bot
-│└────────────┈ ⳹        
-│©2024 Mr Unique Hacker 
-└─────────────────┈ ⳹\n\n`
+                        // Wait before sending warning message
+                        await delay(2000);
+
+                        // Send warning message with better formatting
+                        const warningMessage = await KnightBot.sendMessage(userJid, {
+                            text: `⚠️ *IMPORTANT SECURITY WARNING* ⚠️
+
+🔒 *DO NOT SHARE THIS FILE WITH ANYONE!*
+
+This session file contains your WhatsApp credentials. Keep it secure like your password.
+
+┌─✦ *Knight Bot* ✦
+│
+├─🎯 *Thanks for using Knight Bot*
+├─🔧 *Version: 2.0*
+├─👑 *Developer: Mr Unique Hacker*
+│
+└─© 2024 All rights reserved
+
+📌 *Keep this file safe and secure!*`
                         });
-                        console.log("⚠️ Warning message sent successfully");
+                        console.log("⚠️ Warning message sent successfully", warningMessage?.key?.id);
 
-                        // Clean up session after use
-                        console.log("🧹 Cleaning up session...");
+                        // Send final confirmation message
                         await delay(1000);
+                        const confirmMessage = await KnightBot.sendMessage(userJid, {
+                            text: `✅ *Session Setup Complete!*\n\nYour Knight Bot session has been successfully configured. You can now use the bot features.\n\nNeed help? Watch the setup guide above or contact support.`
+                        });
+                        console.log("✅ Confirmation message sent");
+
+                        // Clean up session after use (with longer delay)
+                        console.log("🧹 Cleaning up session in 5 seconds...");
+                        await delay(5000);
                         removeFile(dirs);
                         console.log("✅ Session cleaned up successfully");
                         console.log("🎉 Process completed successfully!");
-                        // Do not exit the process, just finish gracefully
+
                     } catch (error) {
                         console.error("❌ Error sending messages:", error);
-                        // Still clean up session even if sending fails
+                        
+                        // Try to send error notification to user
+                        try {
+                            const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
+                            await KnightBot.sendMessage(userJid, {
+                                text: `❌ *Error Setting Up Session*\n\nThere was an issue sending your session file. Please try generating a new pair code.\n\nError: ${error.message}`
+                            });
+                        } catch (e) {
+                            console.error("Couldn't send error message:", e);
+                        }
+                        
+                        // Clean up session
                         removeFile(dirs);
-                        // Do not exit the process, just finish gracefully
                     }
                 }
 
                 if (isNewLogin) {
-                    console.log("🔐 New login via pair code");
+                    console.log("🔐 New login detected");
                 }
 
                 if (isOnline) {
-                    console.log("📶 Client is online");
+                    console.log("📶 Client is online and ready");
                 }
 
                 if (connection === 'close') {
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
+                    console.log("🔌 Connection closed, status:", statusCode);
 
                     if (statusCode === 401) {
                         console.log("❌ Logged out from WhatsApp. Need to generate new pair code.");
                     } else {
-                        console.log("🔁 Connection closed — restarting...");
-                        initiateSession();
+                        console.log("🔁 Connection closed — may restart...");
                     }
                 }
             });
 
             if (!KnightBot.authState.creds.registered) {
-                await delay(3000); // Wait 3 seconds before requesting pairing code
+                await delay(5000); // Increased wait time for better stability
                 num = num.replace(/[^\d+]/g, '');
                 if (num.startsWith('+')) num = num.substring(1);
 
@@ -140,11 +185,12 @@ router.get('/', async (req, res) => {
                     let code = await KnightBot.requestPairingCode(num);
                     code = code?.match(/.{1,4}/g)?.join('-') || code;
                     if (!res.headersSent) {
-                        console.log({ num, code });
+                        console.log("📋 Pair code generated for:", num);
+                        console.log("🔢 Code:", code);
                         await res.send({ code });
                     }
                 } catch (error) {
-                    console.error('Error requesting pairing code:', error);
+                    console.error('❌ Error requesting pairing code:', error);
                     if (!res.headersSent) {
                         res.status(503).send({ code: 'Failed to get pairing code. Please check your phone number and try again.' });
                     }
@@ -152,10 +198,11 @@ router.get('/', async (req, res) => {
             }
 
             KnightBot.ev.on('creds.update', saveCreds);
+
         } catch (err) {
-            console.error('Error initializing session:', err);
+            console.error('❌ Error initializing session:', err);
             if (!res.headersSent) {
-                res.status(503).send({ code: 'Service Unavailable' });
+                res.status(503).send({ code: 'Service Unavailable. Please try again later.' });
             }
         }
     }
