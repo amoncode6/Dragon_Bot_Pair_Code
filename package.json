@@ -1,27 +1,26 @@
 {
-  "name": "knight-bot",
-  "version": "1.0.0",
-  "description": "Knight Bot - WhatsApp Pair Code Generator",
-  "main": "index.js",
-  "type": "module",
+  "description": "starcore-session",
+  "main": "./index.js",
   "engines": {
+    "npm": ">=9.7.2",
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "node index.js",
-    "build": "echo 'No build step required'"
+    "start": "node index.js"
   },
-  "author": "Mr Unique Hacker",
-  "license": "ISC",
+  "author": "Malvin King",
+  "license": "GPL-3.0 license",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.18",
-    "awesome-phonenumber": "7.2.0",
-    "body-parser": "^1.20.3",
-    "express": "^4.21.2",
+    "@whiskeysockets/baileys": "github:XdKing2/Malvin-Baileys",
+    "qrcode": "^1.5.3",
+    "awesome-phonenumber": "^2.64.0",
+    "pino": "^8.1.0",
+    "phone": "3.1.30",
+    "body-parser": "^1.20.1",
+    "pastebin-js": "^1.0.6",
+    "express": "^4.18.1",
     "path": "^0.12.7",
-    "phone": "3.1.55",
-    "pino": "9.5.0",
-    "qrcode": "^1.5.4",
-    "qrcode-terminal": "^0.12.0"
+    "jimp": "^1.6.0",
+    "chalk": "^4.1.2"
   }
 }
