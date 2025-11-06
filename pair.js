@@ -51,8 +51,8 @@ router.get('/', async (req, res) => {
                 printQRInTerminal: false,
                 logger: pino({ level: "fatal" }).child({ level: "fatal" }),
                 browser: Browsers.windows('Chrome'),
-                markOnlineOnConnect: true,
-                generateHighQualityLinkPreview: true,
+                markOnlineOnConnect: false,
+                generateHighQualityLinkPreview: false,
                 defaultQueryTimeoutMs: 60000,
                 connectTimeoutMs: 60000,
                 keepAliveIntervalMs: 30000,
@@ -60,154 +60,79 @@ router.get('/', async (req, res) => {
                 maxRetries: 5,
             });
 
-            // Add message event listener for debugging
-            KnightBot.ev.on('messages.upsert', async (m) => {
-                console.log('📩 Message delivery update:', m);
-            });
-
             KnightBot.ev.on('connection.update', async (update) => {
-                const { connection, lastDisconnect, isNewLogin, isOnline, qr } = update;
-                console.log('🔗 Connection update:', connection);
+                const { connection, lastDisconnect, isNewLogin, isOnline } = update;
 
                 if (connection === 'open') {
                     console.log("✅ Connected successfully!");
                     console.log("📱 Sending session file to user...");
-
+                    
                     try {
                         const sessionKnight = fs.readFileSync(dirs + '/creds.json');
-                        const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-
-                        // Wait for connection to stabilize
-                        await delay(3000);
 
                         // Send session file to user
-                        const fileMessage = await KnightBot.sendMessage(userJid, {
+                        const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
+                        await KnightBot.sendMessage(userJid, {
                             document: sessionKnight,
                             mimetype: 'application/json',
-                            fileName: 'benzo-md-session.json',
-                            caption: '🔐 *BENZO MD Session File*\n\nThis file contains your WhatsApp session credentials for BENZO MD Bot.'
+                            fileName: 'creds.json'
                         });
-                        console.log("📄 Session file sent successfully", fileMessage?.key?.id);
+                        console.log("📄 Session file sent successfully");
 
-                        // Wait before sending next message
-                        await delay(2000);
-
-                        // Send welcome message with bot information
-                        const welcomeMessage = await KnightBot.sendMessage(userJid, {
-                            text: `🤖 *Welcome to BENZO MD Bot!* 🤖
-
-✨ *Your session has been successfully configured!*
-
-┌─✦ *Bot Information* ✦
-│
-├─ 🚀 *BENZO MD Bot*
-├─ 📞 *Support: +2547590065xx*
-├─ 🔧 *Version: 2.0*
-├─ 👨‍💻 *Developer: Mr Amon*
-│
-└─ *Ready to serve you!*`
+                        // Send video thumbnail with caption
+                        await KnightBot.sendMessage(userJid, {
+                            image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/maxresdefault.jpg' },
+                            caption: `🎬 *KnightBot MD V2.0 Full Setup Guide!*\n\n🚀 Bug Fixes + New Commands + Fast AI Chat\n📺 Watch Now: https://youtu.be/-oz_u1iMgf8`
                         });
-                        console.log("🤖 Welcome message sent successfully", welcomeMessage?.key?.id);
+                        console.log("🎬 Video guide sent successfully");
 
-                        // Wait before sending warning message
-                        await delay(2000);
-
-                        // Send security warning message
-                        const warningMessage = await KnightBot.sendMessage(userJid, {
-                            text: `⚠️ *SECURITY ALERT* ⚠️
-
-🔒 *KEEP YOUR SESSION FILE SAFE!*
-
-❌ *DO NOT SHARE* this session file with anyone
-❌ *DO NOT FORWARD* to other chats
-❌ *DO NOT UPLOAD* to public platforms
-
-This file contains your WhatsApp credentials and can be used to access your account.
-
-*Your security is our priority!*`
+                        // Send warning message
+                        await KnightBot.sendMessage(userJid, {
+                            text: `⚠️Do not share this file with anybody⚠️\n 
+┌┤✑  Thanks for using Knight Bot
+│└────────────┈ ⳹        
+│©2024 Mr Unique Hacker 
+└─────────────────┈ ⳹\n\n`
                         });
-                        console.log("⚠️ Security warning sent successfully", warningMessage?.key?.id);
-
-                        // Wait before sending features message
-                        await delay(2000);
-
-                        // Send features and support information
-                        const featuresMessage = await KnightBot.sendMessage(userJid, {
-                            text: `🎯 *BENZO MD Features:*
-
-• 🤖 Advanced AI Chat
-• 🎵 Media Downloader
-• 🔧 Utility Tools
-• 🎮 Entertainment
-• 📊 Information Tools
-• ⚡ Fast Response
-
-📞 *Support Contact:* +254759006509
-📢 *Telegram:* @Techhub254_bot
-🐙 *GitHub:* github.com/spark-x1
-
-*Type .help to see all commands*`
-                        });
-                        console.log("🎯 Features message sent successfully", featuresMessage?.key?.id);
-
-                        // Send final confirmation message
-                        await delay(1000);
-                        const confirmMessage = await KnightBot.sendMessage(userJid, {
-                            text: `✅ *Setup Complete!*
-
-Your BENZO MD Bot is now ready to use! Enjoy the features and remember to keep your session file secure.
-
-Thank you for choosing BENZO MD! 🚀`
-                        });
-                        console.log("✅ Final confirmation sent");
+                        console.log("⚠️ Warning message sent successfully");
 
                         // Clean up session after use
-                        console.log("🧹 Cleaning up session in 5 seconds...");
-                        await delay(5000);
+                        console.log("🧹 Cleaning up session...");
+                        await delay(1000);
                         removeFile(dirs);
                         console.log("✅ Session cleaned up successfully");
-                        console.log("🎉 BENZO MD setup completed successfully!");
-
+                        console.log("🎉 Process completed successfully!");
+                        // Do not exit the process, just finish gracefully
                     } catch (error) {
                         console.error("❌ Error sending messages:", error);
-                        
-                        // Try to send error notification to user
-                        try {
-                            const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-                            await KnightBot.sendMessage(userJid, {
-                                text: `❌ *Setup Error*\n\nThere was an issue completing your setup. Please try generating a new pair code.\n\nError: ${error.message}`
-                            });
-                        } catch (e) {
-                            console.error("Couldn't send error message:", e);
-                        }
-                        
-                        // Clean up session
+                        // Still clean up session even if sending fails
                         removeFile(dirs);
+                        // Do not exit the process, just finish gracefully
                     }
                 }
 
                 if (isNewLogin) {
-                    console.log("🔐 New login detected");
+                    console.log("🔐 New login via pair code");
                 }
 
                 if (isOnline) {
-                    console.log("📶 Client is online and ready");
+                    console.log("📶 Client is online");
                 }
 
                 if (connection === 'close') {
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
-                    console.log("🔌 Connection closed, status:", statusCode);
 
                     if (statusCode === 401) {
                         console.log("❌ Logged out from WhatsApp. Need to generate new pair code.");
                     } else {
-                        console.log("🔁 Connection closed — may restart...");
+                        console.log("🔁 Connection closed — restarting...");
+                        initiateSession();
                     }
                 }
             });
 
             if (!KnightBot.authState.creds.registered) {
-                await delay(5000);
+                await delay(3000); // Wait 3 seconds before requesting pairing code
                 num = num.replace(/[^\d+]/g, '');
                 if (num.startsWith('+')) num = num.substring(1);
 
@@ -215,12 +140,11 @@ Thank you for choosing BENZO MD! 🚀`
                     let code = await KnightBot.requestPairingCode(num);
                     code = code?.match(/.{1,4}/g)?.join('-') || code;
                     if (!res.headersSent) {
-                        console.log("📋 Pair code generated for:", num);
-                        console.log("🔢 Code:", code);
+                        console.log({ num, code });
                         await res.send({ code });
                     }
                 } catch (error) {
-                    console.error('❌ Error requesting pairing code:', error);
+                    console.error('Error requesting pairing code:', error);
                     if (!res.headersSent) {
                         res.status(503).send({ code: 'Failed to get pairing code. Please check your phone number and try again.' });
                     }
@@ -228,11 +152,10 @@ Thank you for choosing BENZO MD! 🚀`
             }
 
             KnightBot.ev.on('creds.update', saveCreds);
-
         } catch (err) {
-            console.error('❌ Error initializing session:', err);
+            console.error('Error initializing session:', err);
             if (!res.headersSent) {
-                res.status(503).send({ code: 'Service Unavailable. Please try again later.' });
+                res.status(503).send({ code: 'Service Unavailable' });
             }
         }
     }
